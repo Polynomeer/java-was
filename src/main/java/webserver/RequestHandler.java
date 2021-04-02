@@ -54,23 +54,26 @@ public class RequestHandler extends Thread {
                 log.debug("header : {}", line);
             }
 
-
             User user;
-            if (method.equals("GET") && url.contains("/user/create")) {
-                String queryString = url.split("\\?")[1];
-                user = parseUrl(queryString);
-            }
+//            if (method.equals("GET") && url.contains("/user/create")) {
+//                String queryString = url.split("\\?")[1];
+//                user = parseUrl(queryString);
+//            }
 
+            if (method.equals("GET")) {
+                DataOutputStream dos = new DataOutputStream(out);
+                byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
+                response200Header(dos, body.length);
+                responseBody(dos, body);
+            }
             if (method.equals("POST")) {
                 requestBody = IOUtils.readData(bufferedReader, contentLength);
                 log.debug("request body : {}", requestBody);
                 user = parseUrl(requestBody);
+                DataOutputStream dos = new DataOutputStream(out);
+                response302Header(dos);
+                log.debug("response header : {}", dos);
             }
-
-            DataOutputStream dos = new DataOutputStream(out);
-            byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
-            response200Header(dos, body.length);
-            responseBody(dos, body);
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -94,6 +97,16 @@ public class RequestHandler extends Thread {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response302Header(DataOutputStream dos) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: /index.html\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
