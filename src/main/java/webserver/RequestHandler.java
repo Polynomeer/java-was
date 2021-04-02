@@ -4,9 +4,9 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.Map;
 
+import db.DataBase;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +41,7 @@ public class RequestHandler extends Thread {
             log.debug("url : {}", url);
 
             String requestBody = "";
+
             int contentLength = 0;
             while (!line.equals("")) {
                 line = bufferedReader.readLine();
@@ -54,7 +55,7 @@ public class RequestHandler extends Thread {
                 log.debug("header : {}", line);
             }
 
-            User user;
+
 //            if (method.equals("GET") && url.contains("/user/create")) {
 //                String queryString = url.split("\\?")[1];
 //                user = parseUrl(queryString);
@@ -67,13 +68,34 @@ public class RequestHandler extends Thread {
                 responseBody(dos, body);
             }
             if (method.equals("POST")) {
-                requestBody = IOUtils.readData(bufferedReader, contentLength);
-                log.debug("request body : {}", requestBody);
-                user = parseUrl(requestBody);
-                DataOutputStream dos = new DataOutputStream(out);
-                response302Header(dos);
-                log.debug("response header : {}", dos);
+                if (url.startsWith("/create")) {
+                    requestBody = IOUtils.readData(bufferedReader, contentLength);
+                    log.debug("request body : {}", requestBody);
+                    User user = parseUrl(requestBody);
+                    DataBase.addUser(user);
+
+                    DataOutputStream dos = new DataOutputStream(out);
+                    response302Header(dos);
+                    log.debug("response header : {}", dos);
+                } else if (url.startsWith("/user/login")) {
+                    DataOutputStream dos = new DataOutputStream(out);
+                    String queryString = IOUtils.readData(bufferedReader, contentLength);
+                    Map<String, String> map = HttpRequestUtils.parseQueryString(queryString);
+
+                    User user = DataBase.findUserById(map.get("userId"));
+                    String cookie = "logined=false";
+
+                    if (user == null || !user.matchPassword(map.get("password"))) {
+                        response302HeaderLoginFailed(dos, cookie);
+                    }
+                    // login success
+                    cookie = "logined=true";
+
+                    response302HeaderWithCookie(dos, cookie);
+                }
             }
+
+
         } catch (IOException e) {
             log.error(e.getMessage());
         }
@@ -97,6 +119,28 @@ public class RequestHandler extends Thread {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response302HeaderWithCookie(DataOutputStream dos, String cookie) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: /index.html\r\n");
+            dos.writeBytes("Set-Cookie: " + cookie + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response302HeaderLoginFailed(DataOutputStream dos, String cookie) {
+        try {
+            dos.writeBytes("HTTP/1.1 302 Found \r\n");
+            dos.writeBytes("Location: /user/login_failed.html\r\n");
+            dos.writeBytes("Set-Cookie: " + cookie + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
