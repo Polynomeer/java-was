@@ -66,8 +66,16 @@ public class RequestHandler extends Thread {
 //                user = parseUrl(queryString);
 //            }
 
+
             if (method.equals("GET")) {
-                if (url.startsWith("/user/list")) {
+                if (url.startsWith("/css")) {
+                    DataOutputStream dos = new DataOutputStream(out);
+                    byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
+                    response200HeaderCss(dos, body.length);
+                    responseBody(dos, body);
+                }
+
+                if (url.startsWith("/user/list.html")) {
                     if (cookie.contains("logined=true")) {
                         DataOutputStream dos = new DataOutputStream(out);
                         byte[] body = buildUserListResponseBody();
@@ -138,6 +146,17 @@ public class RequestHandler extends Thread {
         try {
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
             dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
+            dos.writeBytes("\r\n");
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+    }
+
+    private void response200HeaderCss(DataOutputStream dos, int lengthOfBodyContent) {
+        try {
+            dos.writeBytes("HTTP/1.1 200 OK \r\n");
+            dos.writeBytes("Content-Type: text/css;charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
