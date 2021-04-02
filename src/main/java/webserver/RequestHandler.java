@@ -73,9 +73,7 @@ public class RequestHandler extends Thread {
                     byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
                     response200HeaderCss(dos, body.length);
                     responseBody(dos, body);
-                }
-
-                if (url.startsWith("/user/list.html")) {
+                } else if (url.startsWith("/user/list.html")) {
                     if (cookie.contains("logined=true")) {
                         DataOutputStream dos = new DataOutputStream(out);
                         byte[] body = buildUserListResponseBody();
@@ -89,6 +87,10 @@ public class RequestHandler extends Thread {
                         response302Header(dos, "/user/login.html");
                         responseBody(dos, body);
                     }
+                } else if (url.startsWith("/user/logout")) {
+                    DataOutputStream dos = new DataOutputStream(out);
+                    String responseCookie = "logined=false";
+                    response302HeaderWithCookie(dos, "/user/login.html", responseCookie);
                 } else {
                     DataOutputStream dos = new DataOutputStream(out);
                     byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
